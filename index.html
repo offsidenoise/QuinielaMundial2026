@@ -225,6 +225,8 @@ function initState(){
 
 // Orden de rondas (mayor = más lejos)
 const RONDA={grupos:0,r32:1,r16:2,qf:3,sf:4,tercer:5,final:6};
+// Nivel de ronda al que avanza el GANADOR de cada eliminatoria
+const SIGUIENTE_RONDA={ r32:RONDA.r16, r16:RONDA.qf, qf:RONDA.sf, sf:RONDA.final };
 const conductScore=(y,r)=>y*1+r*3;  // menor es mejor
 
 // ══════════════════════════════════════════════════════
@@ -356,6 +358,15 @@ function computar(eventos){
     else if(g1!==g2){ gan=g1>g2?t1:t2; per=g1>g2?t2:t1; }
 
     if(rKey!=='grupos'&&per){ st[per].eliminado=true; st[per].etapa=etapaNombre(rKey,false); }
+
+    // El GANADOR de una eliminatoria avanza a la ronda siguiente de inmediato,
+    // aunque ESPN todavía no liste su próximo partido. Así siempre queda por
+    // encima del que fue eliminado en esa misma ronda.
+    if(rKey!=='grupos' && rKey!=='final' && rKey!=='tercer' && gan){
+      const siguiente = SIGUIENTE_RONDA[rKey];
+      if(siguiente!==undefined && siguiente>st[gan].ronda) st[gan].ronda=siguiente;
+    }
+
     if(rKey==='final'){ if(gan){campeon=gan;} if(per){subcampeon=per;} }
     if(rKey==='tercer'){ if(gan){tercero=gan;} if(per){cuarto=per;} }
   }
