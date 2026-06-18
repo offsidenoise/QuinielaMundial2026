@@ -64,7 +64,7 @@ main{max-width:1000px;margin:14px auto 0;padding:0 18px 40px;}
 .jname{font-family:'Barlow Condensed',sans-serif;font-size:19px;font-weight:700;}
 .top1 .jname{color:var(--dorado);}
 .jpts{text-align:right;}
-.jpts b{font-family:'Bebas Neue',sans-serif;font-size:25px;color:var(--verde-claro);line-height:1;display:block;}
+.jpts b{font-family:'Bebas Neue',sans-serif;font-size:25px;color:var(--texto);line-height:1;display:block;}
 .jpts span{font-size:9px;color:var(--dim);letter-spacing:1px;text-transform:uppercase;}
 .jteams{padding:0 14px 11px;display:flex;flex-direction:column;gap:5px;}
 .jteam{display:flex;align-items:center;justify-content:space-between;font-size:12.5px;padding:5px 10px;border-radius:7px;background:var(--card2);}
@@ -72,7 +72,7 @@ main{max-width:1000px;margin:14px auto 0;padding:0 18px 40px;}
 .bdot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
 .bdot.b1{background:var(--b1);}.bdot.b2{background:var(--b2);}.bdot.b3{background:var(--b3);}
 .jteam .tp{display:flex;align-items:center;gap:8px;}
-.jteam .tpts{font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--verde-claro);}
+.jteam .tpts{font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--texto);}
 .jteam .trank{font-size:10px;color:var(--dim);}
 .jteam .tstate{font-size:10px;padding:1px 6px;border-radius:4px;}
 .tstate.activo{background:rgba(0,200,90,.12);color:var(--verde-claro);}
@@ -111,7 +111,7 @@ footer{text-align:center;padding:22px;font-size:11px;color:var(--dim);border-top
   <div class="head-row">
     <img class="head-logo" src="https://upload.wikimedia.org/wikipedia/en/thumb/1/17/2026_FIFA_World_Cup_emblem.svg/250px-2026_FIFA_World_Cup_emblem.svg.png" alt="WC2026" onerror="this.style.display='none'">
     <div class="head-titles">
-      <span class="head-eyebrow">Copa del Mundo 2026</span>
+      <span class="head-eyebrow">Mundial 2026</span>
       <span class="head-name">Quiniela Profanadores</span>
     </div>
     <button class="refresh-btn" id="btn-refresh" onclick="refrescar()">
@@ -160,13 +160,13 @@ const JUGADORES = [
   {nombre:"Sanro",   b1:"Inglaterra",     b2:"Noruega",         b3:"Escocia"},
   {nombre:"Tinho",   b1:"Argentina",      b2:"Corea del Sur",   b3:"Bosnia y Herzegovina"},
   {nombre:"Dilfer",  b1:"España",         b2:"Austria",         b3:"Catar"},
-  {nombre:"Diablo",  b1:"Alemania",       b2:"Suecia",          b3:"Panamá"},
+  {nombre:"Dieblo",  b1:"Alemania",       b2:"Suecia",          b3:"Panamá"},
   {nombre:"Serazzi", b1:"Portugal",       b2:"Ecuador",         b3:"Iraq"},
   {nombre:"Barrera", b1:"Países Bajos",   b2:"Turquía",         b3:"Sudáfrica"},
   {nombre:"Mach",    b1:"Uruguay",        b2:"República Checa", b3:"DR Congo"},
   {nombre:"Hernan",  b1:"Bélgica",        b2:"Canadá",          b3:"Uzbekistán"},
   {nombre:"Chase",   b1:"Croacia",        b2:"Australia",       b3:"Jordania"},
-  {nombre:"Tafich",  b1:"Marruecos",      b2:"Egipto",          b3:"Cabo Verde"},
+  {nombre:"Tafich / Hugo",  b1:"Marruecos",      b2:"Egipto",          b3:"Cabo Verde"},
   {nombre:"Pirata",  b1:"Estados Unidos", b2:"Costa de Marfil", b3:"Curaçao"},
   {nombre:"Marvin",  b1:"México",         b2:"Paraguay",        b3:"Haití"},
   {nombre:"Trish",   b1:"Colombia",       b2:"Túnez",           b3:"Irán"},
