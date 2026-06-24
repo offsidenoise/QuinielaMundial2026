@@ -206,11 +206,11 @@ footer{text-align:center;padding:22px;font-size:11px;color:var(--dim);border-top
     <div class="sec"><span class="sec-t">🏅 Ranking de los 48 Equipos</span><div class="sec-l"></div></div>
     <div class="rk-note">Orden por desempeño: ronda alcanzada en el torneo, luego criterios de desempate FIFA (puntos → enfrentamiento directo → diferencia de goles → goles a favor → conducta → Ranking FIFA). El 1er lugar otorga 48 pts, el 48º otorga 1 pt.</div>
     <div class="rk-head">
-      <span class="rk-th" onclick="ordenarRanking('pos')">#<i class="arr" data-col="pos"></i></span>
-      <span class="rk-th" onclick="ordenarRanking('pais')">País<i class="arr" data-col="pais"></i></span>
-      <span class="rk-th" onclick="ordenarRanking('prof')">Profanador<i class="arr" data-col="prof"></i></span>
-      <span class="rk-th c" onclick="ordenarRanking('pts')">Pts<i class="arr" data-col="pts"></i></span>
-      <span class="rk-th c" onclick="ordenarRanking('ronda')">Ronda<i class="arr" data-col="ronda"></i></span>
+      <span class="rk-th" data-sort="pos">#<i class="arr" data-col="pos"></i></span>
+      <span class="rk-th" data-sort="pais">País<i class="arr" data-col="pais"></i></span>
+      <span class="rk-th" data-sort="prof">Profanador<i class="arr" data-col="prof"></i></span>
+      <span class="rk-th c" data-sort="pts">Pts<i class="arr" data-col="pts"></i></span>
+      <span class="rk-th c" data-sort="ronda">Ronda<i class="arr" data-col="ronda"></i></span>
     </div>
     <div id="lista-ranking"></div>
   </div>
@@ -567,10 +567,12 @@ function renderResumen(){
 let ordenCol='pos', ordenDir='asc';
 
 function ordenarRanking(col){
+  if(!col) return;
   if(ordenCol===col){ ordenDir = (ordenDir==='asc' ? 'desc' : 'asc'); }
   else { ordenCol=col; ordenDir='asc'; }
-  renderRanking();
+  try{ renderRanking(); }catch(e){ console.error('sort error',e); }
 }
+window.ordenarRanking = ordenarRanking;
 
 function renderRanking(){
   const rk=calcularRanking();  // viene ordenado por desempeño (pos 1..48)
@@ -703,6 +705,15 @@ cargarCache();            // si hay datos guardados, mostrarlos de inmediato
 setStatus('Cargando resultados en vivo…','pulse');
 render();
 refrescar();              // y refrescar en vivo en segundo plano
+
+// Conecta los encabezados ordenables (más robusto que onclick inline)
+function conectarSort(){
+  document.querySelectorAll('.rk-th[data-sort]').forEach(th=>{
+    th.addEventListener('click',()=>ordenarRanking(th.getAttribute('data-sort')));
+  });
+}
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',conectarSort);
+else conectarSort();
 </script>
 <div class="overlay" id="overlay-reglas" onclick="if(event.target===this)cerrarReglas()">
   <div class="overlay-box" id="reglas-box">
