@@ -124,6 +124,9 @@ main{max-width:1000px;margin:14px auto 0;padding:0 18px 40px;}
 
 /* ── RANKING (tab 2) ── */
 .rk-head{display:grid;grid-template-columns:34px 1.2fr 1fr 44px 78px;padding:7px 12px;font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--dim);border-bottom:1px solid var(--borde);}
+.rk-th{cursor:pointer;user-select:none;-webkit-user-select:none;transition:color .15s;}
+.rk-th:hover{color:var(--texto);}
+.rk-th .arr{font-style:normal;color:var(--acento);font-size:9px;}
 .rk-head .c{text-align:center;}
 .rk-row{display:grid;grid-template-columns:34px 1.2fr 1fr 44px 78px;align-items:center;padding:9px 12px;border-bottom:1px solid var(--linea);font-size:13px;}
 .rk-prof{color:var(--dim);font-size:12.5px;}
@@ -203,11 +206,11 @@ footer{text-align:center;padding:22px;font-size:11px;color:var(--dim);border-top
     <div class="sec"><span class="sec-t">🏅 Ranking de los 48 Equipos</span><div class="sec-l"></div></div>
     <div class="rk-note">Orden por desempeño: ronda alcanzada en el torneo, luego criterios de desempate FIFA (puntos → enfrentamiento directo → diferencia de goles → goles a favor → conducta → Ranking FIFA). El 1er lugar otorga 48 pts, el 48º otorga 1 pt.</div>
     <div class="rk-head">
-      <span>#</span>
-      <span>País</span>
-      <span>Profanador</span>
-      <span class="c">Pts</span>
-      <span class="c">Ronda</span>
+      <span class="rk-th" onclick="ordenarRanking('pos')">#<i class="arr" data-col="pos"></i></span>
+      <span class="rk-th" onclick="ordenarRanking('pais')">País<i class="arr" data-col="pais"></i></span>
+      <span class="rk-th" onclick="ordenarRanking('prof')">Profanador<i class="arr" data-col="prof"></i></span>
+      <span class="rk-th c" onclick="ordenarRanking('pts')">Pts<i class="arr" data-col="pts"></i></span>
+      <span class="rk-th c" onclick="ordenarRanking('ronda')">Ronda<i class="arr" data-col="ronda"></i></span>
     </div>
     <div id="lista-ranking"></div>
   </div>
@@ -560,8 +563,40 @@ function renderResumen(){
   }).join('');
 }
 
+// Estado de orden del ranking. Por defecto: posición ascendente (1→48 = mejor desempeño primero)
+let ordenCol='pos', ordenDir='asc';
+
+function ordenarRanking(col){
+  if(ordenCol===col){ ordenDir = (ordenDir==='asc' ? 'desc' : 'asc'); }
+  else { ordenCol=col; ordenDir='asc'; }
+  renderRanking();
+}
+
 function renderRanking(){
-  const rk=calcularRanking();
+  const rk=calcularRanking();  // viene ordenado por desempeño (pos 1..48)
+
+  // valor de cada columna para comparar
+  const val=(r,col)=>{
+    if(col==='pos') return r.pos;
+    if(col==='pts') return r.puntos;
+    if(col==='ronda') return etapaRank(r);          // qué tan lejos llegó (mayor = más lejos)
+    if(col==='pais') return (r.equipo||'').toLowerCase();
+    if(col==='prof') return (PROFANADOR_DE[r.equipo]||'').toLowerCase();
+    return r.pos;
+  };
+  const dir = ordenDir==='asc' ? 1 : -1;
+  rk.sort((a,b)=>{
+    const va=val(a,ordenCol), vb=val(b,ordenCol);
+    if(va<vb) return -1*dir;
+    if(va>vb) return 1*dir;
+    return (a.pos-b.pos); // desempate estable por posición
+  });
+
+  // flechas indicadoras en los encabezados
+  document.querySelectorAll('.arr').forEach(el=>{
+    el.textContent = (el.dataset.col===ordenCol) ? (ordenDir==='asc'?' ▲':' ▼') : '';
+  });
+
   document.getElementById('lista-ranking').innerHTML=rk.map(r=>{
     let stage,scls;
     if(r.campeon){stage='🏆 Campeón';scls='stg-camp';}
@@ -576,6 +611,17 @@ function renderRanking(){
       <div class="rk-stage ${scls}">${stage}</div>
     </div>`;
   }).join('');
+}
+
+// Nivel de avance para ordenar por "Ronda" (mayor = llegó más lejos)
+// Grupos < Dieciseisavos < Octavos < Cuartos < Semifinal < 4º < 3º < Subcampeón < Campeón
+function etapaRank(r){
+  if(r.campeon) return 9;
+  if(r.subcampeon) return 8;
+  if(r.tercero) return 7;
+  if(r.cuarto) return 6;
+  // r.ronda: grupos=0, r32=1, r16=2, qf=3, sf=4  (alcanzada)
+  return r.ronda||0;
 }
 
 function irTab(id,el){
