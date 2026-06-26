@@ -141,6 +141,22 @@ main{max-width:1000px;margin:14px auto 0;padding:0 18px 40px;}
 .stg-camp{color:var(--dorado);}.stg-elim{color:#FF8FA3;}.stg-live{color:var(--dim);}
 .rk-note{font-size:11px;color:var(--dim);margin-bottom:12px;line-height:1.5;}
 
+/* ── ESTADÍSTICAS (tab 3) ── */
+.est-scroll{overflow-x:auto;scrollbar-width:thin;}
+.est-head,.est-row{display:grid;grid-template-columns:minmax(130px,1.4fr) 44px 36px 44px 40px 40px 46px 44px 44px 54px;align-items:center;min-width:560px;}
+.est-head{padding:7px 10px;font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--dim);border-bottom:1px solid var(--borde);}
+.est-head .c,.est-row .c{text-align:center;}
+.est-th{cursor:pointer;user-select:none;-webkit-user-select:none;transition:color .15s;}
+.est-th:hover{color:var(--texto);}
+.est-th .arr{font-style:normal;color:var(--acento);font-size:9px;}
+.est-row{padding:9px 10px;border-bottom:1px solid var(--linea);font-size:13px;}
+.est-row:hover{background:var(--card2);}
+.est-eq{display:flex;align-items:center;gap:7px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;}
+.est-prof{font-weight:400;color:var(--dim);font-size:12px;}
+.est-c{text-align:center;color:var(--dim);font-size:12.5px;}
+.est-pts{text-align:center;font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--acento);}
+.est-cond{text-align:center;font-weight:700;}
+
 footer{text-align:center;padding:22px;font-size:11px;color:var(--dim);border-top:1px solid var(--borde);margin-top:30px;}
 
 /* ── BOTTOM SHEET REGLAS (sube desde abajo) ── */
@@ -186,6 +202,7 @@ footer{text-align:center;padding:22px;font-size:11px;color:var(--dim);border-top
   <div class="tabs">
     <button class="tab active" onclick="irTab('resumen',this)">📊 Resumen</button>
     <button class="tab" onclick="irTab('ranking',this)">🏅 Ranking de Equipos</button>
+    <button class="tab" onclick="irTab('estadisticas',this)">📈 Estadísticas</button>
   </div>
 </header>
 
@@ -213,6 +230,26 @@ footer{text-align:center;padding:22px;font-size:11px;color:var(--dim);border-top
       <span class="rk-th c" data-sort="ronda">Ronda<i class="arr" data-col="ronda"></i></span>
     </div>
     <div id="lista-ranking"></div>
+  </div>
+
+  <div id="pane-estadisticas" class="pane">
+    <div class="sec"><span class="sec-t">📈 Estadísticas y Criterios de Desempate</span><div class="sec-l"></div></div>
+    <div class="rk-note">Criterios FIFA por equipo. Toca un encabezado para ordenar. <b>Conducta</b> = tarjetas amarillas + (rojas × 2); menos es mejor.</div>
+    <div class="est-scroll">
+      <div class="est-head">
+        <span class="est-th" data-est="equipo">Equipo<i class="arr" data-ecol="equipo"></i></span>
+        <span class="est-th c" data-est="grupo">Gpo<i class="arr" data-ecol="grupo"></i></span>
+        <span class="est-th c" data-est="jugados">J<i class="arr" data-ecol="jugados"></i></span>
+        <span class="est-th c" data-est="pts">Pts<i class="arr" data-ecol="pts"></i></span>
+        <span class="est-th c" data-est="gf">GF<i class="arr" data-ecol="gf"></i></span>
+        <span class="est-th c" data-est="ga">GC<i class="arr" data-ecol="ga"></i></span>
+        <span class="est-th c" data-est="gd">DG<i class="arr" data-ecol="gd"></i></span>
+        <span class="est-th c" data-est="yellow">🟨<i class="arr" data-ecol="yellow"></i></span>
+        <span class="est-th c" data-est="red">🟥<i class="arr" data-ecol="red"></i></span>
+        <span class="est-th c" data-est="conducta">Cond.<i class="arr" data-ecol="conducta"></i></span>
+      </div>
+      <div id="lista-estadisticas"></div>
+    </div>
   </div>
 </main>
 
@@ -266,17 +303,20 @@ const PROFANADOR_DE = {};
 JUGADORES.forEach(j=>{ PROFANADOR_DE[j.b1]=j.nombre; PROFANADOR_DE[j.b2]=j.nombre; PROFANADOR_DE[j.b3]=j.nombre; });
 
 // Ranking FIFA oficial (1 abr 2026) — menor número = mejor
+// Ranking FIFA oficial — actualización 11 junio 2026 (última antes del Mundial). Fuente: ESPN
 const FIFA_RANK = {
-  'Francia':1,'España':2,'Argentina':3,'Inglaterra':4,'Portugal':5,
-  'Brasil':6,'Países Bajos':7,'Marruecos':8,'Bélgica':9,'Alemania':10,
-  'Croacia':11,'Colombia':13,'Senegal':14,'México':15,'Estados Unidos':16,
-  'Uruguay':17,'Japón':18,'Suiza':19,'Irán':21,'Turquía':22,
-  'Austria':23,'Ecuador':24,'Corea del Sur':25,'Australia':27,'Egipto':28,
-  'Argelia':29,'Canadá':30,'Noruega':31,'Panamá':33,'Costa de Marfil':34,
-  'Suecia':38,'Paraguay':40,'República Checa':41,'Escocia':43,'Túnez':45,
-  'DR Congo':46,'Uzbekistán':50,'Catar':55,'Iraq':57,'Sudáfrica':60,
-  'Arabia Saudita':61,'Jordania':63,'Bosnia y Herzegovina':65,'Cabo Verde':68,'Ghana':74,
-  'Curaçao':82,'Haití':83,'Nueva Zelanda':85,
+  'Argentina':1,'España':2,'Francia':3,'Inglaterra':4,'Portugal':5,
+  'Brasil':6,'Marruecos':7,'Países Bajos':8,'Bélgica':9,'Alemania':10,
+  'Croacia':11,'Colombia':13,'México':14,'Senegal':15,'Uruguay':16,
+  'Estados Unidos':17,'Japón':18,'Suiza':19,'Irán':20,'Turquía':22,
+  'Ecuador':23,'Austria':24,'Corea del Sur':25,'Australia':27,'Argelia':28,
+  'Egipto':29,'Canadá':30,'Noruega':31,'Costa de Marfil':33,'Panamá':34,
+  'Suecia':38,'República Checa':40,'Paraguay':41,'Escocia':42,'Túnez':45,
+  'DR Congo':46,'Uzbekistán':50,
+  // menciones fuera del Top 50 que clasificaron al Mundial
+  'Catar':56,'Iraq':57,'Sudáfrica':60,'Arabia Saudita':61,'Jordania':63,
+  'Bosnia y Herzegovina':64,'Cabo Verde':67,'Ghana':73,'Curaçao':82,
+  'Haití':83,'Nueva Zelanda':85,
 };
 
 const TODOS_EQUIPOS = Object.values(GRUPOS).flat();
@@ -286,6 +326,7 @@ const TODOS_EQUIPOS = Object.values(GRUPOS).flat();
 //  st[eq] = {gf,ga,pts,gd,yellow,red,jugados, ronda, etapa, eliminado, campeon}
 // ══════════════════════════════════════════════════════
 let st = {};
+let PARTIDOS_JUGADOS = [];  // ids de partidos completados (para tarjetas)
 function initState(){
   st = {};
   TODOS_EQUIPOS.forEach(e=>{
@@ -299,7 +340,7 @@ function initState(){
 const RONDA={grupos:0,r32:1,r16:2,qf:3,sf:4,tercer:5,final:6};
 // Nivel de ronda al que avanza el GANADOR de cada eliminatoria
 const SIGUIENTE_RONDA={ r32:RONDA.r16, r16:RONDA.qf, qf:RONDA.sf, sf:RONDA.final };
-const conductScore=(y,r)=>y*1+r*3;  // menor es mejor
+const conductScore=(y,r)=>(y||0)*1+(r||0)*2;  // roja = 2 amarillas; menor es mejor
 
 // ══════════════════════════════════════════════════════
 // ESPN  (igual técnica que tu otra app: API + proxy CORS)
@@ -374,6 +415,9 @@ async function refrescar(){
     }
     if(eventos.length===0) throw new Error('Sin datos de ESPN');
     computar(eventos);
+    render();                    // pinta de inmediato con resultados
+    setStatus('🎴 Cargando tarjetas…','pulse');
+    await cargarTarjetas();      // luego completa tarjetas (una llamada por partido)
     guardarCache();
     const jug=eventos.filter(e=>e.status?.type?.completed===true).length;
     setStatus(`✅ Actualizado · ${jug} partidos jugados`,'green');
@@ -396,6 +440,7 @@ async function refrescar(){
 function computar(eventos){
   initState();
   let campeon=null,subcampeon=null,tercero=null,cuarto=null;
+  PARTIDOS_JUGADOS=[];  // ids de partidos completados (para tarjetas)
 
   for(const ev of eventos){
     const comp=ev.competitions?.[0]; if(!comp) continue;
@@ -413,6 +458,7 @@ function computar(eventos){
     [t1,t2].forEach(t=>{ if(rIdx>st[t].ronda) st[t].ronda=rIdx; });
 
     if(ev.status?.type?.completed!==true) continue;
+    if(ev.id) PARTIDOS_JUGADOS.push(ev.id);
     const g1=parseInt(hC.score)||0, g2=parseInt(aC.score)||0;
 
     if(rKey==='grupos'){
@@ -458,6 +504,36 @@ function computar(eventos){
 }
 
 function ronKeyDe(idx){ return Object.keys(RONDA).find(k=>RONDA[k]===idx)||'grupos'; }
+
+// Trae las tarjetas (amarillas/rojas) de cada partido jugado desde el summary de ESPN.
+// keyEvents[] contiene los eventos; los de tipo tarjeta traen el equipo y el tipo.
+async function cargarTarjetas(){
+  if(!PARTIDOS_JUGADOS.length) return;
+  for(const id of PARTIDOS_JUGADOS){
+    try{
+      const r=await espnFetch(`${ESPN}/summary?event=${id}`);
+      if(!r.ok) continue;
+      const j=await r.json();
+      const evs=j.keyEvents||j.commentary||[];
+      for(const ev of evs){
+        const txt=((ev.type&&ev.type.text)||ev.text||'').toLowerCase();
+        let tipo=null;
+        if(txt.includes('yellow')) tipo='y';
+        else if(txt.includes('red')) tipo='r';
+        if(!tipo) continue;
+        // equipo del evento
+        const tn = ev.team?.displayName || ev.team?.name ||
+                   (ev.participants&&ev.participants[0]?.athlete?.team?.displayName) || '';
+        const eq=normEquipo(tn);
+        if(eq && st[eq]!==undefined){
+          if(tipo==='y') st[eq].yellow=(st[eq].yellow||0)+1;
+          else st[eq].red=(st[eq].red||0)+1;
+        }
+      }
+    }catch(e){}
+  }
+}
+
 function etapaNombre(rKey,vivo){
   const M={grupos:'Fase de Grupos',r32:'Dieciseisavos',r16:'Octavos',qf:'Cuartos',sf:'Semifinal',final:'Final',tercer:'3er Lugar'};
   return M[rKey]||'Fase de Grupos';
@@ -519,7 +595,7 @@ function setStatus(msg,type){
   else if(type==='gray') d.classList.add('gray');
 }
 
-function render(){ renderResumen(); renderRanking(); }
+function render(){ renderResumen(); renderRanking(); renderEstadisticas(); }
 
 function renderResumen(){
   const ptsEq=puntosPorEquipo();
@@ -626,6 +702,60 @@ function etapaRank(r){
   return r.ronda||0;
 }
 
+// ── ESTADÍSTICAS ──
+let estCol='conducta', estDir='asc';  // por defecto: mejor conducta primero
+function conducta(eq){ return (st[eq].yellow||0) + (st[eq].red||0)*2; } // roja = 2 amarillas
+
+function ordenarEst(col){
+  if(!col) return;
+  if(estCol===col){ estDir = (estDir==='asc'?'desc':'asc'); }
+  else {
+    estCol=col;
+    // por defecto: texto asc; números desc (más arriba), salvo conducta/GC (menos es mejor → asc)
+    estDir = (col==='equipo'||col==='grupo'||col==='conducta'||col==='ga') ? 'asc' : 'desc';
+  }
+  try{ renderEstadisticas(); }catch(e){ console.error('est sort',e); }
+}
+window.ordenarEst = ordenarEst;
+
+function renderEstadisticas(){
+  const filas = TODOS_EQUIPOS.map(eq=>({
+    equipo:eq, grupo:GRUPO_DE[eq]||'',
+    jugados:st[eq].jugados||0, pts:st[eq].pts||0,
+    gf:st[eq].gf||0, ga:st[eq].ga||0, gd:st[eq].gd||0,
+    yellow:st[eq].yellow||0, red:st[eq].red||0, conducta:conducta(eq)
+  }));
+
+  const val=(r,c)=> (c==='equipo'||c==='grupo') ? (r[c]||'').toLowerCase() : (r[c]||0);
+  const dir = estDir==='asc' ? 1 : -1;
+  filas.sort((a,b)=>{
+    const va=val(a,estCol), vb=val(b,estCol);
+    if(va<vb) return -1*dir;
+    if(va>vb) return 1*dir;
+    return a.equipo.localeCompare(b.equipo);
+  });
+
+  document.querySelectorAll('.arr[data-ecol]').forEach(el=>{
+    el.textContent = (el.dataset.ecol===estCol) ? (estDir==='asc'?' ▲':' ▼') : '';
+  });
+
+  const cont=document.getElementById('lista-estadisticas');
+  if(!cont) return;
+  cont.innerHTML=filas.map(r=>`
+    <div class="est-row">
+      <div class="est-eq">${r.equipo} <span class="est-prof">(${PROFANADOR_DE[r.equipo]||'—'})</span></div>
+      <div class="est-c">${r.grupo}</div>
+      <div class="est-c">${r.jugados}</div>
+      <div class="est-pts">${r.pts}</div>
+      <div class="est-c">${r.gf}</div>
+      <div class="est-c">${r.ga}</div>
+      <div class="est-c">${r.gd>0?'+':''}${r.gd}</div>
+      <div class="est-c">${r.yellow}</div>
+      <div class="est-c">${r.red}</div>
+      <div class="est-cond">${r.conducta}</div>
+    </div>`).join('');
+}
+
 function irTab(id,el){
   document.querySelectorAll('.pane').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
@@ -710,6 +840,9 @@ refrescar();              // y refrescar en vivo en segundo plano
 function conectarSort(){
   document.querySelectorAll('.rk-th[data-sort]').forEach(th=>{
     th.addEventListener('click',()=>ordenarRanking(th.getAttribute('data-sort')));
+  });
+  document.querySelectorAll('.est-th[data-est]').forEach(th=>{
+    th.addEventListener('click',()=>ordenarEst(th.getAttribute('data-est')));
   });
 }
 if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',conectarSort);
