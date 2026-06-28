@@ -897,52 +897,54 @@ function renderBracket(){
     return `<div class="bcol ${extraCls}"><div class="bcol-title">${titulo}</div>${ms}</div>`;
   };
 
-  // Árbol real del bracket ESPN, por gameIds explícitos (orden vertical de cada columna).
+  // Árbol real del bracket ESPN 2026 (fuente: fixtures oficiales).
   const porId={}; (EVENTOS_RAW||[]).forEach(e=>{ if(e&&e.id) porId[String(e.id)]=e; });
   const tbdMatch = '<div class="bmatch bmatch-tbd"><div class="bteam"><span class="bteam-main"><span class="bteam-name">Por definir</span></span></div><div class="bmatch-sep"></div><div class="bteam"><span class="bteam-main"><span class="bteam-name">Por definir</span></span></div></div>';
-  const colIds=(titulo,ids,extraCls='')=>{
-    const ms = ids.map(id=> porId[String(id)] ? matchHTML(porId[String(id)]) : tbdMatch).join('');
+
+  // Match N (73..104) -> gameId ESPN.  M73=760486, así que id = 760413 + N
+  const MID = n => String(760413 + n);
+  const colMatches=(titulo,nums,extraCls='')=>{
+    const ms = nums.map(n=> porId[MID(n)] ? matchHTML(porId[MID(n)]) : tbdMatch).join('');
     return `<div class="bcol ${extraCls}"><div class="bcol-title">${titulo}</div>${ms}</div>`;
   };
 
-  // Mapa de IDs (bracket oficial ESPN 2026):
-  //  R32 W1..W16 = ids 760486..760501 (en orden de match)
-  //  R16: 760502=W2/W5, 760503=W1/W3, 760504=W4/W6, 760505=W7/W8,
-  //       760506=W11/W12, 760507=W9/W10, 760508=W14/W16, 760509=W13/W15
-  //  QF: 760510=R16(W1/W2), 760511=R16(W5/W6), 760512=R16(W3/W4), 760513=R16(W7/W8)
-  //  SF: 760514=QF(W1/W2), 760515=QF(W3/W4)  ·  Final 760517 · 3er 760516
-  const RID = n => 760485 + n;   // W{n}
+  // Feeders reales:
+  //  R16: M89=W74/W77, M90=W73/W75, M91=W76/W78, M92=W79/W80,
+  //       M93=W83/W84, M94=W81/W82, M95=W86/W88, M96=W85/W87
+  //  QF:  M97=W89/W90, M98=W93/W94, M99=W91/W92, M100=W95/W96
+  //  SF:  M101=W97/W98 (IZQUIERDA), M102=W99/W100 (DERECHA)
+  //  Final M104, 3er lugar M103
 
-  // LADO IZQUIERDO (arriba→abajo): fluye hacia SF 760514
-  const r32IzqIds = [RID(1),RID(3), RID(2),RID(5), RID(9),RID(10), RID(11),RID(12)];
-  const r16IzqIds = [760503, 760502, 760507, 760506]; // W1/W3, W2/W5, W9/W10, W11/W12
-  const qfIzqIds  = [760510, 760511];
-  const sfIzqIds  = [760514];
+  // IZQUIERDA (Semifinal 101), orden vertical alineado al árbol:
+  const r32Izq = [74,77, 73,75, 83,84, 81,82];
+  const r16Izq = [89, 90, 93, 94];
+  const qfIzq  = [97, 98];
+  const sfIzq  = [101];
 
-  // LADO DERECHO (arriba→abajo): fluye hacia SF 760515
-  const r32DerIds = [RID(4),RID(6), RID(7),RID(8), RID(13),RID(15), RID(14),RID(16)];
-  const r16DerIds = [760504, 760505, 760509, 760508]; // W4/W6, W7/W8, W13/W15, W14/W16
-  const qfDerIds  = [760512, 760513];
-  const sfDerIds  = [760515];
+  // DERECHA (Semifinal 102):
+  const r32Der = [76,78, 79,80, 86,88, 85,87];
+  const r16Der = [91, 92, 95, 96];
+  const qfDer  = [99, 100];
+  const sfDer  = [102];
 
   const centro = `<div class="bcol bcol-final">
     <div class="bcol-title">Final</div>
-    ${porId['760517']?matchHTML(porId['760517']):tbdMatch}
+    ${porId[MID(104)]?matchHTML(porId[MID(104)]):tbdMatch}
     <div class="bfinal-label">🏆</div>
     <div class="bcol-title" style="margin-top:10px">3er Lugar</div>
-    ${porId['760516']?matchHTML(porId['760516']):tbdMatch}
+    ${porId[MID(103)]?matchHTML(porId[MID(103)]):tbdMatch}
   </div>`;
 
   cont.innerHTML =
-    colIds('Dieciseisavos', r32IzqIds) +
-    colIds('Octavos', r16IzqIds) +
-    colIds('Cuartos', qfIzqIds) +
-    colIds('Semis', sfIzqIds) +
+    colMatches('Dieciseisavos', r32Izq) +
+    colMatches('Octavos', r16Izq) +
+    colMatches('Cuartos', qfIzq) +
+    colMatches('Semis', sfIzq) +
     centro +
-    colIds('Semis', sfDerIds) +
-    colIds('Cuartos', qfDerIds) +
-    colIds('Octavos', r16DerIds) +
-    colIds('Dieciseisavos', r32DerIds);
+    colMatches('Semis', sfDer) +
+    colMatches('Cuartos', qfDer) +
+    colMatches('Octavos', r16Der) +
+    colMatches('Dieciseisavos', r32Der);
 }
 
 // Muestra/oculta el panel de reglas DENTRO de la app (sube desde abajo)
