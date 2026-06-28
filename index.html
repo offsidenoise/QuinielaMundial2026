@@ -897,32 +897,52 @@ function renderBracket(){
     return `<div class="bcol ${extraCls}"><div class="bcol-title">${titulo}</div>${ms}</div>`;
   };
 
-  // Reparte R32/R16/QF/SF en dos mitades (izquierda y derecha)
-  const mitad=(arr)=>{const m=Math.ceil(arr.length/2);return [arr.slice(0,m),arr.slice(m)];};
-  const [r32i,r32d]=mitad(porRonda.r32);
-  const [r16i,r16d]=mitad(porRonda.r16);
-  const [qfi,qfd]=mitad(porRonda.qf);
-  const [sfi,sfd]=mitad(porRonda.sf);
+  // Árbol real del bracket ESPN, por gameIds explícitos (orden vertical de cada columna).
+  const porId={}; (EVENTOS_RAW||[]).forEach(e=>{ if(e&&e.id) porId[String(e.id)]=e; });
+  const tbdMatch = '<div class="bmatch bmatch-tbd"><div class="bteam"><span class="bteam-main"><span class="bteam-name">Por definir</span></span></div><div class="bmatch-sep"></div><div class="bteam"><span class="bteam-main"><span class="bteam-name">Por definir</span></span></div></div>';
+  const colIds=(titulo,ids,extraCls='')=>{
+    const ms = ids.map(id=> porId[String(id)] ? matchHTML(porId[String(id)]) : tbdMatch).join('');
+    return `<div class="bcol ${extraCls}"><div class="bcol-title">${titulo}</div>${ms}</div>`;
+  };
 
-  // Centro: Final + 3er lugar
+  // Mapa de IDs (bracket oficial ESPN 2026):
+  //  R32 W1..W16 = ids 760486..760501 (en orden de match)
+  //  R16: 760502=W2/W5, 760503=W1/W3, 760504=W4/W6, 760505=W7/W8,
+  //       760506=W11/W12, 760507=W9/W10, 760508=W14/W16, 760509=W13/W15
+  //  QF: 760510=R16(W1/W2), 760511=R16(W5/W6), 760512=R16(W3/W4), 760513=R16(W7/W8)
+  //  SF: 760514=QF(W1/W2), 760515=QF(W3/W4)  ·  Final 760517 · 3er 760516
+  const RID = n => 760485 + n;   // W{n}
+
+  // LADO IZQUIERDO (arriba→abajo): fluye hacia SF 760514
+  const r32IzqIds = [RID(1),RID(3), RID(2),RID(5), RID(9),RID(10), RID(11),RID(12)];
+  const r16IzqIds = [760503, 760502, 760507, 760506]; // W1/W3, W2/W5, W9/W10, W11/W12
+  const qfIzqIds  = [760510, 760511];
+  const sfIzqIds  = [760514];
+
+  // LADO DERECHO (arriba→abajo): fluye hacia SF 760515
+  const r32DerIds = [RID(4),RID(6), RID(7),RID(8), RID(13),RID(15), RID(14),RID(16)];
+  const r16DerIds = [760504, 760505, 760509, 760508]; // W4/W6, W7/W8, W13/W15, W14/W16
+  const qfDerIds  = [760512, 760513];
+  const sfDerIds  = [760515];
+
   const centro = `<div class="bcol bcol-final">
     <div class="bcol-title">Final</div>
-    ${porRonda.final.map(matchHTML).join('')||'<div class="bmatch bmatch-tbd"><div class="bteam"><span class="bteam-main"><span class="bteam-name">Por definir</span></span></div></div>'}
+    ${porId['760517']?matchHTML(porId['760517']):tbdMatch}
     <div class="bfinal-label">🏆</div>
     <div class="bcol-title" style="margin-top:10px">3er Lugar</div>
-    ${porRonda.tercer.map(matchHTML).join('')||'<div class="bmatch bmatch-tbd"><div class="bteam"><span class="bteam-main"><span class="bteam-name">Por definir</span></span></div></div>'}
+    ${porId['760516']?matchHTML(porId['760516']):tbdMatch}
   </div>`;
 
   cont.innerHTML =
-    colHTML('Dieciseisavos',r32i) +
-    colHTML('Octavos',r16i) +
-    colHTML('Cuartos',qfi) +
-    colHTML('Semis',sfi) +
+    colIds('Dieciseisavos', r32IzqIds) +
+    colIds('Octavos', r16IzqIds) +
+    colIds('Cuartos', qfIzqIds) +
+    colIds('Semis', sfIzqIds) +
     centro +
-    colHTML('Semis',sfd) +
-    colHTML('Cuartos',qfd) +
-    colHTML('Octavos',r16d) +
-    colHTML('Dieciseisavos',r32d);
+    colIds('Semis', sfDerIds) +
+    colIds('Cuartos', qfDerIds) +
+    colIds('Octavos', r16DerIds) +
+    colIds('Dieciseisavos', r32DerIds);
 }
 
 // Muestra/oculta el panel de reglas DENTRO de la app (sube desde abajo)
