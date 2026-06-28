@@ -842,109 +842,165 @@ function irTab(id,el){
 }
 
 // ── BRACKET ──
+// Seeds oficiales R32 (igual que la otra app): cada partido por posiciones de grupo.
+const R32_SEEDS = [
+  {m:73,h:'A2',a:'B2'},{m:74,h:'E1',a:'3rd'},{m:75,h:'F1',a:'C2'},{m:76,h:'C1',a:'F2'},
+  {m:77,h:'I1',a:'3rd'},{m:78,h:'E2',a:'I2'},{m:79,h:'A1',a:'3rd'},{m:80,h:'L1',a:'3rd'},
+  {m:81,h:'D1',a:'3rd'},{m:82,h:'G1',a:'3rd'},{m:83,h:'K2',a:'L2'},{m:84,h:'H1',a:'J2'},
+  {m:85,h:'B1',a:'3rd'},{m:86,h:'J1',a:'H2'},{m:87,h:'K1',a:'3rd'},{m:88,h:'D2',a:'G2'},
+];
+const R16_FEED={89:[74,77],90:[73,75],91:[76,78],92:[79,80],93:[83,84],94:[81,82],95:[86,88],96:[85,87]};
+const QF_FEED={97:[89,90],98:[93,94],99:[91,92],100:[95,96]};
+const SF_FEED={101:[97,98],102:[99,100]};
+
+// Posiciones (1º/2º) de cada grupo según resultados actuales.
+function posicionesGrupo(){
+  const pos={}; // 'A1'->equipo, 'A2'->equipo
+  for(const [g,eqs] of Object.entries(GRUPOS)){
+    const orden=[...eqs].sort((a,b)=>{
+      if(st[b].pts!==st[a].pts) return st[b].pts-st[a].pts;
+      if(st[b].gd!==st[a].gd) return st[b].gd-st[a].gd;
+      if(st[b].gf!==st[a].gf) return st[b].gf-st[a].gf;
+      return (FIFA_RANK[a]||999)-(FIFA_RANK[b]||999);
+    });
+    // ¿el grupo ya jugó todos sus partidos? (cada equipo jugó 3)
+    const completo = eqs.every(e=>st[e].jugados>=3);
+    pos[g+'1']={eq:orden[0], firme:completo};
+    pos[g+'2']={eq:orden[1], firme:completo};
+  }
+  return pos;
+}
+
+// Resuelve el ganador de un partido KO desde los datos de ESPN (por equipos del slot).
+function ganadorKO(matchNum, resolved){
+  const r=resolved[matchNum];
+  if(!r) return null;
+  return r.ganador||null;
+}
+
 function renderBracket(){
   const cont=document.getElementById('bracket-cont');
   if(!cont) return;
 
-  // Agrupa los eventos eliminatorios por ronda
-  const porRonda={r32:[],r16:[],qf:[],sf:[],final:[],tercer:[]};
+  // 1) Indexa los eventos KO de ESPN por los equipos que enfrentan (para sacar marcador/ganador)
+  //    key = "equipoA|equipoB" ordenado, value = {a,b,sa,sb,ganador,done}
+  const koPorPar={};
   for(const ev of (EVENTOS_RAW||[])){
+    const k=rondaDe(ev); if(k==='grupos') continue;
     const comp=ev.competitions?.[0]; if(!comp) continue;
-    const k=rondaDe(ev);
-    if(porRonda[k]) porRonda[k].push(ev);
-  }
-  // Ordena cada ronda por gameId (= orden oficial del bracket ESPN)
-  Object.keys(porRonda).forEach(k=>porRonda[k].sort((a,b)=>(parseInt(a.id)||0)-(parseInt(b.id)||0)));
-
-  // Si aún no hay eliminatorias en los datos, muestra aviso
-  const totalKO = porRonda.r32.length+porRonda.r16.length+porRonda.qf.length+porRonda.sf.length+porRonda.final.length;
-  if(totalKO===0){
-    cont.innerHTML=`<div style="padding:30px 16px;color:var(--dim);font-size:13px;text-align:center;width:100%">La fase eliminatoria aún no comienza. El bracket se llenará automáticamente cuando ESPN publique los cruces de Dieciseisavos.</div>`;
-    return;
-  }
-
-  // Construye una "tarjeta" de partido
-  const matchHTML=(ev)=>{
-    const comp=ev.competitions?.[0];
-    const cs=comp?.competitors||[];
+    const cs=comp.competitors||[]; if(cs.length<2) continue;
     const hC=cs.find(c=>c.homeAway==='home')||cs[0];
     const aC=cs.find(c=>c.homeAway==='away')||cs[1];
+    const ta=normEquipo(hC.team?.displayName||hC.team?.name||'');
+    const tb=normEquipo(aC.team?.displayName||aC.team?.name||'');
+    if(!ta||!tb||st[ta]===undefined||st[tb]===undefined) continue;
     const done=ev.status?.type?.completed===true;
-    const fila=(c)=>{
-      const crudo = c ? (c.team?.displayName||c.team?.name||'') : '';
-      const norm = normEquipo(crudo);
-      // Solo es un equipo real si lo reconocemos en nuestra lista
-      const nombre = (norm && st[norm]!==undefined) ? norm : '';
-      const tbd = !nombre;
-      const flag = BANDERA[nombre]||'';
-      const prof = PROFANADOR_DE[nombre] ? `(${PROFANADOR_DE[nombre]})` : '';
-      const score = (done && !tbd && c && c.score!=null && c.score!=='') ? c.score : '';
-      const win = (done && !tbd && c && c.winner===true) ? 'win' : '';
-      return `<div class="bteam ${win} ${tbd?'bmatch-tbd':''}">
-        <span class="bflag">${flag}</span>
-        <span class="bteam-main">
-          <span class="bteam-name">${nombre||'Por definir'}</span>
-          ${prof?`<span class="bteam-prof">${prof}</span>`:''}
-        </span>
-        <span class="bscore">${score}</span>
-      </div>`;
-    };
-    return `<div class="bmatch">${fila(hC)}<div class="bmatch-sep"></div>${fila(aC)}</div>`;
+    const sa=parseInt(hC.score), sb=parseInt(aC.score);
+    let ganador=null;
+    if(done){
+      if(hC.winner===true) ganador=ta;
+      else if(aC.winner===true) ganador=tb;
+      else if(sa>sb) ganador=ta; else if(sb>sa) ganador=tb;
+    }
+    const key=[ta,tb].sort().join('|');
+    koPorPar[key]={a:ta,b:tb,sa,sb,done,ganador};
+  }
+
+  const pos=posicionesGrupo();
+  const resolved={}; // matchNum -> {home,away,homeFirme,awayFirme,sa,sb,done,ganador}
+
+  // 2) Resuelve R32 desde seeds de grupo
+  const thirdLabels={74:'A/B/C/D/F',77:'C/D/F/G/H',79:'C/E/F/H/I',80:'E/H/I/J/K',
+    81:'B/E/F/I/J',82:'A/E/H/I/J',85:'E/F/G/I/J',87:'A/B/C/D/G/H/K/L'};
+  function slotTeam(code, m){
+    if(/^[A-L][12]$/.test(code)){ const s=pos[code]; return s?{eq:s.eq,firme:s.firme,label:code}:{eq:null,firme:false,label:code}; }
+    if(code==='3rd'){ return {eq:null,firme:false,label:'3º ('+(thirdLabels[m]||'?')+')'}; }
+    return {eq:null,firme:false,label:code};
+  }
+  for(const s of R32_SEEDS){
+    const H=slotTeam(s.h,s.m), A=slotTeam(s.a,s.m);
+    let info={home:H.eq,away:A.eq,homeLabel:H.label,awayLabel:A.label,homeFirme:H.firme,awayFirme:A.firme,sa:null,sb:null,done:false,ganador:null};
+    if(H.eq&&A.eq){
+      const hit=koPorPar[[H.eq,A.eq].sort().join('|')];
+      if(hit){ info.done=hit.done; info.ganador=hit.ganador;
+        info.sa = hit.a===H.eq?hit.sa:hit.sb; info.sb = hit.a===H.eq?hit.sb:hit.sa; }
+    }
+    resolved[s.m]=info;
+  }
+  // 3) Resuelve R16/QF/SF desde los ganadores de la ronda previa
+  function resolveFeed(feedMap){
+    for(const [m,[hm,am]] of Object.entries(feedMap)){
+      const home=resolved[hm]?.ganador||null;
+      const away=resolved[am]?.ganador||null;
+      let info={home,away,homeLabel:`Ganador M${hm}`,awayLabel:`Ganador M${am}`,homeFirme:!!home,awayFirme:!!away,sa:null,sb:null,done:false,ganador:null};
+      if(home&&away){
+        const hit=koPorPar[[home,away].sort().join('|')];
+        if(hit){ info.done=hit.done; info.ganador=hit.ganador;
+          info.sa=hit.a===home?hit.sa:hit.sb; info.sb=hit.a===home?hit.sb:hit.sa; }
+      }
+      resolved[m]=info;
+    }
+  }
+  resolveFeed(R16_FEED); resolveFeed(QF_FEED); resolveFeed(SF_FEED);
+  // Final (104) y 3er lugar (103)
+  {
+    const fH=resolved[101]?.ganador||null, fA=resolved[102]?.ganador||null;
+    let fi={home:fH,away:fA,homeLabel:'Ganador M101',awayLabel:'Ganador M102',homeFirme:!!fH,awayFirme:!!fA,sa:null,sb:null,done:false,ganador:null};
+    if(fH&&fA){const hit=koPorPar[[fH,fA].sort().join('|')]; if(hit){fi.done=hit.done;fi.ganador=hit.ganador;fi.sa=hit.a===fH?hit.sa:hit.sb;fi.sb=hit.a===fH?hit.sb:hit.sa;}}
+    resolved[104]=fi;
+    // 3er: perdedores de SF
+    const l1=resolved[101]&&resolved[101].done?(resolved[101].ganador===resolved[101].home?resolved[101].away:resolved[101].home):null;
+    const l2=resolved[102]&&resolved[102].done?(resolved[102].ganador===resolved[102].home?resolved[102].away:resolved[102].home):null;
+    let ti={home:l1,away:l2,homeLabel:'Perdedor M101',awayLabel:'Perdedor M102',homeFirme:!!l1,awayFirme:!!l2,sa:null,sb:null,done:false,ganador:null};
+    if(l1&&l2){const hit=koPorPar[[l1,l2].sort().join('|')]; if(hit){ti.done=hit.done;ti.ganador=hit.ganador;ti.sa=hit.a===l1?hit.sa:hit.sb;ti.sb=hit.a===l1?hit.sb:hit.sa;}}
+    resolved[103]=ti;
+  }
+
+  // 4) Render de una tarjeta a partir de resolved[m]
+  const filaHTML=(eq,label,firme,score,win)=>{
+    const nombre = eq||'';
+    const tbd=!nombre;
+    const flag = nombre?(BANDERA[nombre]||''):'';
+    const prof = nombre&&PROFANADOR_DE[nombre]?`(${PROFANADOR_DE[nombre]})`:'';
+    const txt = nombre ? (firme?nombre:`${nombre}`) : label;
+    return `<div class="bteam ${win?'win':''} ${tbd?'bmatch-tbd':''}">
+      <span class="bflag">${flag}</span>
+      <span class="bteam-main">
+        <span class="bteam-name">${txt}</span>
+        ${prof?`<span class="bteam-prof">${prof}</span>`:''}
+      </span>
+      <span class="bscore">${score!=null&&score!==''&&!isNaN(score)?score:''}</span>
+    </div>`;
   };
-
-  const colHTML=(titulo,evs,extraCls='')=>{
-    const ms = evs.map(matchHTML).join('') || `<div class="bmatch bmatch-tbd"><div class="bteam"><span class="bteam-main"><span class="bteam-name">Por definir</span></span></div></div>`;
-    return `<div class="bcol ${extraCls}"><div class="bcol-title">${titulo}</div>${ms}</div>`;
+  const matchCard=(m)=>{
+    const r=resolved[m]; if(!r) return tbdCard();
+    const hWin = r.done && r.ganador && r.ganador===r.home;
+    const aWin = r.done && r.ganador && r.ganador===r.away;
+    return `<div class="bmatch">
+      ${filaHTML(r.home,r.homeLabel,r.homeFirme,r.done?r.sa:'',hWin)}
+      <div class="bmatch-sep"></div>
+      ${filaHTML(r.away,r.awayLabel,r.awayFirme,r.done?r.sb:'',aWin)}
+    </div>`;
   };
-
-  // Árbol real del bracket ESPN 2026 (fuente: fixtures oficiales).
-  const porId={}; (EVENTOS_RAW||[]).forEach(e=>{ if(e&&e.id) porId[String(e.id)]=e; });
-  const tbdMatch = '<div class="bmatch bmatch-tbd"><div class="bteam"><span class="bteam-main"><span class="bteam-name">Por definir</span></span></div><div class="bmatch-sep"></div><div class="bteam"><span class="bteam-main"><span class="bteam-name">Por definir</span></span></div></div>';
-
-  // Match N (73..104) -> gameId ESPN.  M73=760486, así que id = 760413 + N
-  const MID = n => String(760413 + n);
-  const colMatches=(titulo,nums,extraCls='')=>{
-    const ms = nums.map(n=> porId[MID(n)] ? matchHTML(porId[MID(n)]) : tbdMatch).join('');
-    return `<div class="bcol ${extraCls}"><div class="bcol-title">${titulo}</div>${ms}</div>`;
-  };
-
-  // Feeders reales:
-  //  R16: M89=W74/W77, M90=W73/W75, M91=W76/W78, M92=W79/W80,
-  //       M93=W83/W84, M94=W81/W82, M95=W86/W88, M96=W85/W87
-  //  QF:  M97=W89/W90, M98=W93/W94, M99=W91/W92, M100=W95/W96
-  //  SF:  M101=W97/W98 (IZQUIERDA), M102=W99/W100 (DERECHA)
-  //  Final M104, 3er lugar M103
-
-  // IZQUIERDA (Semifinal 101), orden vertical alineado al árbol:
-  const r32Izq = [74,77, 73,75, 83,84, 81,82];
-  const r16Izq = [89, 90, 93, 94];
-  const qfIzq  = [97, 98];
-  const sfIzq  = [101];
-
-  // DERECHA (Semifinal 102):
-  const r32Der = [76,78, 79,80, 86,88, 85,87];
-  const r16Der = [91, 92, 95, 96];
-  const qfDer  = [99, 100];
-  const sfDer  = [102];
+  const tbdCard=()=>`<div class="bmatch bmatch-tbd"><div class="bteam"><span class="bteam-main"><span class="bteam-name">Por definir</span></span></div><div class="bmatch-sep"></div><div class="bteam"><span class="bteam-main"><span class="bteam-name">Por definir</span></span></div></div>`;
+  const col=(titulo,nums,extra='')=>`<div class="bcol ${extra}"><div class="bcol-title">${titulo}</div>${nums.map(matchCard).join('')}</div>`;
 
   const centro = `<div class="bcol bcol-final">
-    <div class="bcol-title">Final</div>
-    ${porId[MID(104)]?matchHTML(porId[MID(104)]):tbdMatch}
+    <div class="bcol-title">Final</div>${matchCard(104)}
     <div class="bfinal-label">🏆</div>
-    <div class="bcol-title" style="margin-top:10px">3er Lugar</div>
-    ${porId[MID(103)]?matchHTML(porId[MID(103)]):tbdMatch}
+    <div class="bcol-title" style="margin-top:10px">3er Lugar</div>${matchCard(103)}
   </div>`;
 
   cont.innerHTML =
-    colMatches('Dieciseisavos', r32Izq) +
-    colMatches('Octavos', r16Izq) +
-    colMatches('Cuartos', qfIzq) +
-    colMatches('Semis', sfIzq) +
+    col('Dieciseisavos',[74,77,73,75,83,84,81,82]) +
+    col('Octavos',[89,90,93,94]) +
+    col('Cuartos',[97,98]) +
+    col('Semis',[101]) +
     centro +
-    colMatches('Semis', sfDer) +
-    colMatches('Cuartos', qfDer) +
-    colMatches('Octavos', r16Der) +
-    colMatches('Dieciseisavos', r32Der);
+    col('Semis',[102]) +
+    col('Cuartos',[99,100]) +
+    col('Octavos',[91,92,95,96]) +
+    col('Dieciseisavos',[76,78,79,80,86,88,85,87]);
 }
 
 // Muestra/oculta el panel de reglas DENTRO de la app (sube desde abajo)
