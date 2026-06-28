@@ -159,10 +159,12 @@ main{max-width:1000px;margin:14px auto 0;padding:0 18px 40px;}
 
 /* ── BRACKET (tab 4) ── */
 .bracket-scroll{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;padding-bottom:10px;}
-.bracket{display:flex;align-items:stretch;gap:10px;min-width:max-content;padding:6px 2px;}
-.bcol{display:flex;flex-direction:column;justify-content:space-around;gap:8px;min-width:150px;}
-.bcol-title{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--dim);text-align:center;margin-bottom:2px;}
-.bmatch{background:var(--card);border:1px solid var(--borde);border-radius:9px;padding:6px 8px;display:flex;flex-direction:column;gap:4px;}
+.bracket{display:flex;align-items:stretch;min-width:max-content;padding:6px 2px;}
+.bcol{display:flex;flex-direction:column;min-width:164px;}
+.bcol-title{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--dim);text-align:center;margin-bottom:6px;flex:0 0 16px;}
+.bcol-body{display:flex;flex-direction:column;flex:1 1 auto;}
+.bslot{flex:1 1 0;display:flex;flex-direction:column;justify-content:center;padding:0 9px;}
+.bmatch{background:var(--card);border:1px solid var(--borde);border-radius:9px;padding:6px 8px;display:flex;flex-direction:column;gap:4px;position:relative;}
 .bteam{display:flex;align-items:center;gap:6px;}
 .bteam.win .bteam-name{color:var(--acento);font-weight:700;}
 .bflag{font-size:15px;line-height:1;flex-shrink:0;width:20px;text-align:center;}
@@ -175,6 +177,10 @@ main{max-width:1000px;margin:14px auto 0;padding:0 18px 40px;}
 .bmatch-tbd .bteam-name{color:var(--dim);font-style:italic;font-weight:400;}
 .bcol-final .bmatch{border-color:rgba(245,197,24,.4);}
 .bfinal-label{text-align:center;font-family:'Bebas Neue',sans-serif;font-size:13px;color:var(--dorado);letter-spacing:1px;}
+/* Conectores hacia la ronda siguiente */
+.bslot.conn-r .bmatch::after{content:'';position:absolute;right:-9px;top:50%;width:9px;height:1px;background:var(--borde);}
+.bslot.conn-l .bmatch::before{content:'';position:absolute;left:-9px;top:50%;width:9px;height:1px;background:var(--borde);}
+
 
 footer{text-align:center;padding:22px;font-size:11px;color:var(--dim);border-top:1px solid var(--borde);margin-top:30px;}
 
@@ -983,24 +989,29 @@ function renderBracket(){
     </div>`;
   };
   const tbdCard=()=>`<div class="bmatch bmatch-tbd"><div class="bteam"><span class="bteam-main"><span class="bteam-name">Por definir</span></span></div><div class="bmatch-sep"></div><div class="bteam"><span class="bteam-main"><span class="bteam-name">Por definir</span></span></div></div>`;
-  const col=(titulo,nums,extra='')=>`<div class="bcol ${extra}"><div class="bcol-title">${titulo}</div>${nums.map(matchCard).join('')}</div>`;
+  // lado: 'L' (conector a la derecha) o 'R' (conector a la izquierda) o '' (sin conector)
+  const col=(titulo,nums,lado='',extra='')=>{
+    const connCls = lado==='L'?'conn-r':(lado==='R'?'conn-l':'');
+    const slots = nums.map(m=>`<div class="bslot ${connCls}">${matchCard(m)}</div>`).join('');
+    return `<div class="bcol ${extra}"><div class="bcol-title">${titulo}</div><div class="bcol-body">${slots}</div></div>`;
+  };
 
-  const centro = `<div class="bcol bcol-final">
-    <div class="bcol-title">Final</div>${matchCard(104)}
+  const centro = `<div class="bcol bcol-final"><div class="bcol-title">Final</div><div class="bcol-body">
+    <div class="bslot">${matchCard(104)}
     <div class="bfinal-label">🏆</div>
-    <div class="bcol-title" style="margin-top:10px">3er Lugar</div>${matchCard(103)}
-  </div>`;
+    <div class="bcol-title" style="margin-top:14px">3er Lugar</div>${matchCard(103)}</div>
+  </div></div>`;
 
   cont.innerHTML =
-    col('Dieciseisavos',[74,77,73,75,83,84,81,82]) +
-    col('Octavos',[89,90,93,94]) +
-    col('Cuartos',[97,98]) +
-    col('Semis',[101]) +
+    col('Dieciseisavos',[74,77,73,75,83,84,81,82],'L') +
+    col('Octavos',[89,90,93,94],'L') +
+    col('Cuartos',[97,98],'L') +
+    col('Semis',[101],'L') +
     centro +
-    col('Semis',[102]) +
-    col('Cuartos',[99,100]) +
-    col('Octavos',[91,92,95,96]) +
-    col('Dieciseisavos',[76,78,79,80,86,88,85,87]);
+    col('Semis',[102],'R') +
+    col('Cuartos',[99,100],'R') +
+    col('Octavos',[91,92,95,96],'R') +
+    col('Dieciseisavos',[76,78,79,80,86,88,85,87],'R');
 }
 
 // Muestra/oculta el panel de reglas DENTRO de la app (sube desde abajo)
