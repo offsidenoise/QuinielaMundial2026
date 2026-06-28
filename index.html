@@ -157,6 +157,25 @@ main{max-width:1000px;margin:14px auto 0;padding:0 18px 40px;}
 .est-pts{text-align:center;font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--acento);}
 .est-cond{text-align:center;font-weight:700;}
 
+/* ── BRACKET (tab 4) ── */
+.bracket-scroll{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;padding-bottom:10px;}
+.bracket{display:flex;align-items:stretch;gap:10px;min-width:max-content;padding:6px 2px;}
+.bcol{display:flex;flex-direction:column;justify-content:space-around;gap:8px;min-width:150px;}
+.bcol-title{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--dim);text-align:center;margin-bottom:2px;}
+.bmatch{background:var(--card);border:1px solid var(--borde);border-radius:9px;padding:6px 8px;display:flex;flex-direction:column;gap:4px;}
+.bteam{display:flex;align-items:center;gap:6px;}
+.bteam.win .bteam-name{color:var(--acento);font-weight:700;}
+.bflag{font-size:15px;line-height:1;flex-shrink:0;width:20px;text-align:center;}
+.bteam-main{display:flex;flex-direction:column;line-height:1.05;flex:1;min-width:0;}
+.bteam-name{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.bteam-prof{font-size:9px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.bscore{font-family:'Bebas Neue',sans-serif;font-size:15px;color:var(--texto);min-width:16px;text-align:center;}
+.bteam.win .bscore{color:var(--acento);}
+.bmatch-sep{height:1px;background:var(--linea);margin:1px 0;}
+.bmatch-tbd .bteam-name{color:var(--dim);font-style:italic;font-weight:400;}
+.bcol-final .bmatch{border-color:rgba(245,197,24,.4);}
+.bfinal-label{text-align:center;font-family:'Bebas Neue',sans-serif;font-size:13px;color:var(--dorado);letter-spacing:1px;}
+
 footer{text-align:center;padding:22px;font-size:11px;color:var(--dim);border-top:1px solid var(--borde);margin-top:30px;}
 
 /* ── BOTTOM SHEET REGLAS (sube desde abajo) ── */
@@ -203,6 +222,7 @@ footer{text-align:center;padding:22px;font-size:11px;color:var(--dim);border-top
     <button class="tab active" onclick="irTab('resumen',this)">📊 Resumen</button>
     <button class="tab" onclick="irTab('ranking',this)">🏅 Ranking de Equipos</button>
     <button class="tab" onclick="irTab('estadisticas',this)">📈 Estadísticas</button>
+    <button class="tab" onclick="irTab('bracket',this)">🗺️ Bracket</button>
   </div>
 </header>
 
@@ -249,6 +269,14 @@ footer{text-align:center;padding:22px;font-size:11px;color:var(--dim);border-top
         <span class="est-th c" data-est="conducta">Cond.<i class="arr" data-ecol="conducta"></i></span>
       </div>
       <div id="lista-estadisticas"></div>
+    </div>
+  </div>
+
+  <div id="pane-bracket" class="pane">
+    <div class="sec"><span class="sec-t">🗺️ Bracket · Fase Eliminatoria</span><div class="sec-l"></div></div>
+    <div class="rk-note">Dieciseisavos → Final. Los marcadores aparecen cuando el partido termina. Cada país muestra su bandera y, debajo, su profanador.</div>
+    <div class="bracket-scroll">
+      <div id="bracket-cont" class="bracket"></div>
     </div>
   </div>
 </main>
@@ -302,6 +330,20 @@ Object.entries(GRUPOS).forEach(([g,eqs])=>eqs.forEach(e=>GRUPO_DE[e]=g));
 const PROFANADOR_DE = {};
 JUGADORES.forEach(j=>{ PROFANADOR_DE[j.b1]=j.nombre; PROFANADOR_DE[j.b2]=j.nombre; PROFANADOR_DE[j.b3]=j.nombre; });
 
+// Banderas (emoji) por equipo
+const BANDERA = {
+  'Brasil':'🇧🇷','Francia':'🇫🇷','Inglaterra':'🏴󠁧󠁢󠁥󠁮󠁧󠁿','Argentina':'🇦🇷','España':'🇪🇸',
+  'Alemania':'🇩🇪','Portugal':'🇵🇹','Países Bajos':'🇳🇱','Uruguay':'🇺🇾','Bélgica':'🇧🇪',
+  'Croacia':'🇭🇷','Marruecos':'🇲🇦','Estados Unidos':'🇺🇸','México':'🇲🇽','Colombia':'🇨🇴',
+  'Senegal':'🇸🇳','Suiza':'🇨🇭','Japón':'🇯🇵','Noruega':'🇳🇴','Corea del Sur':'🇰🇷',
+  'Austria':'🇦🇹','Suecia':'🇸🇪','Ecuador':'🇪🇨','Turquía':'🇹🇷','República Checa':'🇨🇿',
+  'Canadá':'🇨🇦','Australia':'🇦🇺','Egipto':'🇪🇬','Costa de Marfil':'🇨🇮','Paraguay':'🇵🇾',
+  'Túnez':'🇹🇳','Argelia':'🇩🇿','Arabia Saudita':'🇸🇦','Ghana':'🇬🇭','Escocia':'🏴󠁧󠁢󠁳󠁣󠁴󠁿',
+  'Bosnia y Herzegovina':'🇧🇦','Catar':'🇶🇦','Panamá':'🇵🇦','Iraq':'🇮🇶','Sudáfrica':'🇿🇦',
+  'DR Congo':'🇨🇩','Uzbekistán':'🇺🇿','Jordania':'🇯🇴','Cabo Verde':'🇨🇻','Curaçao':'🇨🇼',
+  'Haití':'🇭🇹','Irán':'🇮🇷','Nueva Zelanda':'🇳🇿',
+};
+
 // Ranking FIFA oficial (1 abr 2026) — menor número = mejor
 // Ranking FIFA oficial — actualización 11 junio 2026 (última antes del Mundial). Fuente: ESPN
 const FIFA_RANK = {
@@ -326,6 +368,7 @@ const TODOS_EQUIPOS = Object.values(GRUPOS).flat();
 //  st[eq] = {gf,ga,pts,gd,yellow,red,jugados, ronda, etapa, eliminado, campeon}
 // ══════════════════════════════════════════════════════
 let st = {};
+let EVENTOS_RAW = [];        // eventos crudos de ESPN (para el bracket)
 let PARTIDOS_JUGADOS = [];  // ids de partidos completados (para tarjetas)
 function initState(){
   st = {};
@@ -391,13 +434,48 @@ function normEquipo(name){
 
 function clasificarRonda(txt){
   const r=(txt||'').toLowerCase();
-  if(r.includes('third')||r.includes('3rd')) return 'tercer';
+  if(r.includes('third')||r.includes('3rd')||r.includes('3rd-place')) return 'tercer';
   if(r.includes('semi')) return 'sf';
   if(r.includes('quarter')) return 'qf';
-  if(r.includes('round of 16')||r.includes('last 16')) return 'r16';
-  if(r.includes('round of 32')||r.includes('last 32')) return 'r32';
+  if(r.includes('round of 16')||r.includes('last 16')||r.includes('rd16')||r.includes('r16')) return 'r16';
+  if(r.includes('round of 32')||r.includes('last 32')||r.includes('rd32')||r.includes('r32')) return 'r32';
   if(r.includes('final')) return 'final';
   return 'grupos';
+}
+
+// Junta TODOS los campos donde ESPN puede indicar la ronda de un evento.
+function textoRonda(ev){
+  const comp=ev.competitions&&ev.competitions[0];
+  const partes=[];
+  if(comp&&comp.notes) comp.notes.forEach(n=>{ if(n&&n.headline) partes.push(n.headline); });
+  if(comp&&comp.type&&comp.type.text) partes.push(comp.type.text);
+  if(ev.season&&ev.season.slug) partes.push(ev.season.slug);
+  if(ev.name) partes.push(ev.name);
+  if(ev.shortName) partes.push(ev.shortName);
+  if(comp&&comp.competitors) comp.competitors.forEach(c=>{
+    const dn=c.team&&(c.team.displayName||c.team.name);
+    if(dn) partes.push(dn);
+  });
+  return partes.join(' | ');
+}
+
+// Rondas de la fase eliminatoria 2026 por gameId de ESPN (fuente confiable).
+// R32: 760486–760501 · R16: 760502–760509 · QF: 760510–760513 · SF: 760514–760515 · 3er: 760516 · Final: 760517
+function rondaPorId(ev){
+  const id=parseInt(ev.id,10);
+  if(!id) return null;
+  if(id>=760486 && id<=760501) return 'r32';
+  if(id>=760502 && id<=760509) return 'r16';
+  if(id>=760510 && id<=760513) return 'qf';
+  if(id>=760514 && id<=760515) return 'sf';
+  if(id===760516) return 'tercer';
+  if(id===760517) return 'final';
+  return null;
+}
+
+// Ronda definitiva de un evento: primero por ID (confiable), si no, por texto.
+function rondaDe(ev){
+  return rondaPorId(ev) || clasificarRonda(textoRonda(ev));
 }
 
 async function refrescar(){
@@ -414,6 +492,7 @@ async function refrescar(){
         const j=await r.json(); (j.events||[]).forEach(e=>eventos.push(e));}catch(e){}
     }
     if(eventos.length===0) throw new Error('Sin datos de ESPN');
+    EVENTOS_RAW = eventos;
     computar(eventos);
     render();                    // pinta de inmediato con resultados
     setStatus('🎴 Cargando tarjetas…','pulse');
@@ -451,8 +530,7 @@ function computar(eventos){
     const t2=normEquipo(aC.team?.displayName||aC.team?.name||'');
     if(!t1||!t2||st[t1]===undefined||st[t2]===undefined) continue;
 
-    const rTxt=(comp.notes&&comp.notes[0]?.headline)||ev.name||'';
-    const rKey=clasificarRonda(rTxt);
+    const rKey=rondaDe(ev);
     const rIdx=RONDA[rKey]??0;
     // marca la ronda más avanzada alcanzada
     [t1,t2].forEach(t=>{ if(rIdx>st[t].ronda) st[t].ronda=rIdx; });
@@ -595,7 +673,7 @@ function setStatus(msg,type){
   else if(type==='gray') d.classList.add('gray');
 }
 
-function render(){ renderResumen(); renderRanking(); renderEstadisticas(); }
+function render(){ renderResumen(); renderRanking(); renderEstadisticas(); renderBracket(); }
 
 function renderResumen(){
   const ptsEq=puntosPorEquipo();
@@ -761,6 +839,90 @@ function irTab(id,el){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.getElementById('pane-'+id).classList.add('active');
   el.classList.add('active');
+}
+
+// ── BRACKET ──
+function renderBracket(){
+  const cont=document.getElementById('bracket-cont');
+  if(!cont) return;
+
+  // Agrupa los eventos eliminatorios por ronda
+  const porRonda={r32:[],r16:[],qf:[],sf:[],final:[],tercer:[]};
+  for(const ev of (EVENTOS_RAW||[])){
+    const comp=ev.competitions?.[0]; if(!comp) continue;
+    const k=rondaDe(ev);
+    if(porRonda[k]) porRonda[k].push(ev);
+  }
+  // Ordena cada ronda por gameId (= orden oficial del bracket ESPN)
+  Object.keys(porRonda).forEach(k=>porRonda[k].sort((a,b)=>(parseInt(a.id)||0)-(parseInt(b.id)||0)));
+
+  // Si aún no hay eliminatorias en los datos, muestra aviso
+  const totalKO = porRonda.r32.length+porRonda.r16.length+porRonda.qf.length+porRonda.sf.length+porRonda.final.length;
+  if(totalKO===0){
+    cont.innerHTML=`<div style="padding:30px 16px;color:var(--dim);font-size:13px;text-align:center;width:100%">La fase eliminatoria aún no comienza. El bracket se llenará automáticamente cuando ESPN publique los cruces de Dieciseisavos.</div>`;
+    return;
+  }
+
+  // Construye una "tarjeta" de partido
+  const matchHTML=(ev)=>{
+    const comp=ev.competitions?.[0];
+    const cs=comp?.competitors||[];
+    const hC=cs.find(c=>c.homeAway==='home')||cs[0];
+    const aC=cs.find(c=>c.homeAway==='away')||cs[1];
+    const done=ev.status?.type?.completed===true;
+    const fila=(c)=>{
+      const crudo = c ? (c.team?.displayName||c.team?.name||'') : '';
+      const norm = normEquipo(crudo);
+      // Solo es un equipo real si lo reconocemos en nuestra lista
+      const nombre = (norm && st[norm]!==undefined) ? norm : '';
+      const tbd = !nombre;
+      const flag = BANDERA[nombre]||'';
+      const prof = PROFANADOR_DE[nombre] ? `(${PROFANADOR_DE[nombre]})` : '';
+      const score = (done && !tbd && c && c.score!=null && c.score!=='') ? c.score : '';
+      const win = (done && !tbd && c && c.winner===true) ? 'win' : '';
+      return `<div class="bteam ${win} ${tbd?'bmatch-tbd':''}">
+        <span class="bflag">${flag}</span>
+        <span class="bteam-main">
+          <span class="bteam-name">${nombre||'Por definir'}</span>
+          ${prof?`<span class="bteam-prof">${prof}</span>`:''}
+        </span>
+        <span class="bscore">${score}</span>
+      </div>`;
+    };
+    return `<div class="bmatch">${fila(hC)}<div class="bmatch-sep"></div>${fila(aC)}</div>`;
+  };
+
+  const colHTML=(titulo,evs,extraCls='')=>{
+    const ms = evs.map(matchHTML).join('') || `<div class="bmatch bmatch-tbd"><div class="bteam"><span class="bteam-main"><span class="bteam-name">Por definir</span></span></div></div>`;
+    return `<div class="bcol ${extraCls}"><div class="bcol-title">${titulo}</div>${ms}</div>`;
+  };
+
+  // Reparte R32/R16/QF/SF en dos mitades (izquierda y derecha)
+  const mitad=(arr)=>{const m=Math.ceil(arr.length/2);return [arr.slice(0,m),arr.slice(m)];};
+  const [r32i,r32d]=mitad(porRonda.r32);
+  const [r16i,r16d]=mitad(porRonda.r16);
+  const [qfi,qfd]=mitad(porRonda.qf);
+  const [sfi,sfd]=mitad(porRonda.sf);
+
+  // Centro: Final + 3er lugar
+  const centro = `<div class="bcol bcol-final">
+    <div class="bcol-title">Final</div>
+    ${porRonda.final.map(matchHTML).join('')||'<div class="bmatch bmatch-tbd"><div class="bteam"><span class="bteam-main"><span class="bteam-name">Por definir</span></span></div></div>'}
+    <div class="bfinal-label">🏆</div>
+    <div class="bcol-title" style="margin-top:10px">3er Lugar</div>
+    ${porRonda.tercer.map(matchHTML).join('')||'<div class="bmatch bmatch-tbd"><div class="bteam"><span class="bteam-main"><span class="bteam-name">Por definir</span></span></div></div>'}
+  </div>`;
+
+  cont.innerHTML =
+    colHTML('Dieciseisavos',r32i) +
+    colHTML('Octavos',r16i) +
+    colHTML('Cuartos',qfi) +
+    colHTML('Semis',sfi) +
+    centro +
+    colHTML('Semis',sfd) +
+    colHTML('Cuartos',qfd) +
+    colHTML('Octavos',r16d) +
+    colHTML('Dieciseisavos',r32d);
 }
 
 // Muestra/oculta el panel de reglas DENTRO de la app (sube desde abajo)
