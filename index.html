@@ -690,7 +690,9 @@ function renderResumen(){
   const filas=JUGADORES.map(j=>{
     const eqs=[{n:j.b1,b:1},{n:j.b2,b:2},{n:j.b3,b:3}].map(x=>({
       ...x, pts:ptsEq[x.n]||0, rank:rkPos[x.n]||'-', est:st[x.n]
-    }));
+    }))
+    // Ordena los 3 equipos del jugador por su posición en el ranking: mejor (menor #) arriba
+    .sort((a,b)=>(rkPos[a.n]||999)-(rkPos[b.n]||999));
     const total=eqs.reduce((s,e)=>s+e.pts,0);
     const mejor=Math.min(...eqs.map(e=>rkPos[e.n]||999));
     return {nombre:j.nombre, eqs, total, mejor};
