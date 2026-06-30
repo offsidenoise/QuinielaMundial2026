@@ -172,6 +172,8 @@ main{max-width:1000px;margin:14px auto 0;padding:0 18px 40px;}
 .bteam-name{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .bteam-prof{font-size:9px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .bscore{font-family:'Bebas Neue',sans-serif;font-size:15px;color:var(--texto);min-width:16px;text-align:center;}
+.bpen{font-family:'Inter',sans-serif;font-size:10px;color:var(--dim);}
+.bteam.win .bpen{color:var(--acento);}
 .bteam.win .bscore{color:var(--acento);}
 .bmatch-sep{height:1px;background:var(--linea);margin:1px 0;}
 .bmatch-tbd .bteam-name{color:var(--dim);font-style:italic;font-weight:400;}
@@ -908,17 +910,36 @@ function renderBracket(){
     if(!ta||!tb||st[ta]===undefined||st[tb]===undefined) continue;
     const done=ev.status?.type?.completed===true;
     const sa=parseInt(hC.score), sb=parseInt(aC.score);
+    // Penales: ESPN expone shootoutScore en cada competidor cuando hubo tanda
+    const pa = (hC.shootoutScore!=null) ? parseInt(hC.shootoutScore) : null;
+    const pb = (aC.shootoutScore!=null) ? parseInt(aC.shootoutScore) : null;
+    const hayPenales = (pa!=null && pb!=null);
     let ganador=null;
     if(done){
       if(hC.winner===true) ganador=ta;
       else if(aC.winner===true) ganador=tb;
+      else if(hayPenales && pa!==pb) ganador = pa>pb?ta:tb;
       else if(sa>sb) ganador=ta; else if(sb>sa) ganador=tb;
     }
     const key=[ta,tb].sort().join('|');
-    koPorPar[key]={a:ta,b:tb,sa,sb,done,ganador};
+    koPorPar[key]={a:ta,b:tb,sa,sb,pa,pb,hayPenales,done,ganador};
   }
 
-  const resolved={}; // matchNum -> {home,away,homeFirme,awayFirme,sa,sb,done,ganador}
+  const resolved={}; // matchNum -> {home,away,homeFirme,awayFirme,sa,sb,pa,pb,hayPenales,done,ganador}
+
+  // Aplica los datos de un partido de ESPN (hit) a un info, orientando marcador y penales al home/away.
+  function aplicarHit(info, home){
+    const hit=koPorPar[[info.home,info.away].sort().join('|')];
+    if(!hit) return;
+    info.done=hit.done; info.ganador=hit.ganador;
+    info.sa = hit.a===home?hit.sa:hit.sb;
+    info.sb = hit.a===home?hit.sb:hit.sa;
+    info.hayPenales = !!hit.hayPenales;
+    if(hit.hayPenales){
+      info.pa = hit.a===home?hit.pa:hit.pb;
+      info.pb = hit.a===home?hit.pb:hit.pa;
+    }
+  }
 
   // 2) Resuelve R32 desde los enfrentamientos REALES (R32_TEAMS de los fixtures).
   //    El marcador/ganador se busca en ESPN por esos dos equipos.
@@ -927,10 +948,8 @@ function renderBracket(){
     const home=par[0], away=par[1];
     const homeFirme = st[home]!==undefined;
     const awayFirme = st[away]!==undefined;
-    let info={home,away,homeLabel:home,awayLabel:away,homeFirme,awayFirme,sa:null,sb:null,done:false,ganador:null};
-    const hit=koPorPar[[home,away].sort().join('|')];
-    if(hit){ info.done=hit.done; info.ganador=hit.ganador;
-      info.sa = hit.a===home?hit.sa:hit.sb; info.sb = hit.a===home?hit.sb:hit.sa; }
+    let info={home,away,homeLabel:home,awayLabel:away,homeFirme,awayFirme,sa:null,sb:null,pa:null,pb:null,hayPenales:false,done:false,ganador:null};
+    aplicarHit(info, home);
     resolved[m]=info;
   }
   // 3) Resuelve R16/QF/SF desde los ganadores de la ronda previa
@@ -938,12 +957,8 @@ function renderBracket(){
     for(const [m,[hm,am]] of Object.entries(feedMap)){
       const home=resolved[hm]?.ganador||null;
       const away=resolved[am]?.ganador||null;
-      let info={home,away,homeLabel:`Ganador M${hm}`,awayLabel:`Ganador M${am}`,homeFirme:!!home,awayFirme:!!away,sa:null,sb:null,done:false,ganador:null};
-      if(home&&away){
-        const hit=koPorPar[[home,away].sort().join('|')];
-        if(hit){ info.done=hit.done; info.ganador=hit.ganador;
-          info.sa=hit.a===home?hit.sa:hit.sb; info.sb=hit.a===home?hit.sb:hit.sa; }
-      }
+      let info={home,away,homeLabel:`Ganador M${hm}`,awayLabel:`Ganador M${am}`,homeFirme:!!home,awayFirme:!!away,sa:null,sb:null,pa:null,pb:null,hayPenales:false,done:false,ganador:null};
+      if(home&&away) aplicarHit(info, home);
       resolved[m]=info;
     }
   }
@@ -951,41 +966,45 @@ function renderBracket(){
   // Final (104) y 3er lugar (103)
   {
     const fH=resolved[101]?.ganador||null, fA=resolved[102]?.ganador||null;
-    let fi={home:fH,away:fA,homeLabel:'Ganador M101',awayLabel:'Ganador M102',homeFirme:!!fH,awayFirme:!!fA,sa:null,sb:null,done:false,ganador:null};
-    if(fH&&fA){const hit=koPorPar[[fH,fA].sort().join('|')]; if(hit){fi.done=hit.done;fi.ganador=hit.ganador;fi.sa=hit.a===fH?hit.sa:hit.sb;fi.sb=hit.a===fH?hit.sb:hit.sa;}}
+    let fi={home:fH,away:fA,homeLabel:'Ganador M101',awayLabel:'Ganador M102',homeFirme:!!fH,awayFirme:!!fA,sa:null,sb:null,pa:null,pb:null,hayPenales:false,done:false,ganador:null};
+    if(fH&&fA) aplicarHit(fi, fH);
     resolved[104]=fi;
     // 3er: perdedores de SF
     const l1=resolved[101]&&resolved[101].done?(resolved[101].ganador===resolved[101].home?resolved[101].away:resolved[101].home):null;
     const l2=resolved[102]&&resolved[102].done?(resolved[102].ganador===resolved[102].home?resolved[102].away:resolved[102].home):null;
-    let ti={home:l1,away:l2,homeLabel:'Perdedor M101',awayLabel:'Perdedor M102',homeFirme:!!l1,awayFirme:!!l2,sa:null,sb:null,done:false,ganador:null};
-    if(l1&&l2){const hit=koPorPar[[l1,l2].sort().join('|')]; if(hit){ti.done=hit.done;ti.ganador=hit.ganador;ti.sa=hit.a===l1?hit.sa:hit.sb;ti.sb=hit.a===l1?hit.sb:hit.sa;}}
+    let ti={home:l1,away:l2,homeLabel:'Perdedor M101',awayLabel:'Perdedor M102',homeFirme:!!l1,awayFirme:!!l2,sa:null,sb:null,pa:null,pb:null,hayPenales:false,done:false,ganador:null};
+    if(l1&&l2) aplicarHit(ti, l1);
     resolved[103]=ti;
   }
 
   // 4) Render de una tarjeta a partir de resolved[m]
-  const filaHTML=(eq,label,firme,score,win)=>{
+  const filaHTML=(eq,label,firme,score,pen,win)=>{
     const nombre = eq||'';
     const tbd=!nombre;
     const flag = nombre?(BANDERA[nombre]||''):'';
     const prof = nombre&&PROFANADOR_DE[nombre]?`(${PROFANADOR_DE[nombre]})`:'';
     const txt = nombre ? (firme?nombre:`${nombre}`) : label;
+    const scoreTxt = (score!=null&&score!==''&&!isNaN(score)) ? score : '';
+    const penTxt = (pen!=null&&pen!==''&&!isNaN(pen)) ? ` <span class="bpen">(${pen})</span>` : '';
     return `<div class="bteam ${win?'win':''} ${tbd?'bmatch-tbd':''}">
       <span class="bflag">${flag}</span>
       <span class="bteam-main">
         <span class="bteam-name">${txt}</span>
         ${prof?`<span class="bteam-prof">${prof}</span>`:''}
       </span>
-      <span class="bscore">${score!=null&&score!==''&&!isNaN(score)?score:''}</span>
+      <span class="bscore">${scoreTxt}${penTxt}</span>
     </div>`;
   };
   const matchCard=(m)=>{
     const r=resolved[m]; if(!r) return tbdCard();
     const hWin = r.done && r.ganador && r.ganador===r.home;
     const aWin = r.done && r.ganador && r.ganador===r.away;
+    const hPen = (r.done && r.hayPenales) ? r.pa : null;
+    const aPen = (r.done && r.hayPenales) ? r.pb : null;
     return `<div class="bmatch">
-      ${filaHTML(r.home,r.homeLabel,r.homeFirme,r.done?r.sa:'',hWin)}
+      ${filaHTML(r.home,r.homeLabel,r.homeFirme,r.done?r.sa:'',hPen,hWin)}
       <div class="bmatch-sep"></div>
-      ${filaHTML(r.away,r.awayLabel,r.awayFirme,r.done?r.sb:'',aWin)}
+      ${filaHTML(r.away,r.awayLabel,r.awayFirme,r.done?r.sb:'',aPen,aWin)}
     </div>`;
   };
   const tbdCard=()=>`<div class="bmatch bmatch-tbd"><div class="bteam"><span class="bteam-main"><span class="bteam-name">Por definir</span></span></div><div class="bmatch-sep"></div><div class="bteam"><span class="bteam-main"><span class="bteam-name">Por definir</span></span></div></div>`;
